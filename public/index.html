@@ -1,0 +1,239 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Email Server</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #333;
+            margin: 0;
+            padding-left: 20px; 
+            padding-right: 20px;
+            color: #fff;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+        }
+
+        #body {
+            width: 80%;
+            max-width: 1500px;
+            display: flex;
+            justify-content: space-between;
+            height: 80vh; 
+        }
+
+        .inbox-heading {
+            position: sticky;
+            top: 0;
+            background-color: #444;
+            padding: 4%;
+        }
+
+        .inbox-container {
+            flex: 1;
+            border-radius: 10px;
+            background-color: #444;
+            padding: 0px;
+            padding-left: 20px;
+            padding-right: 30px;
+            padding-bottom: 20px;
+            overflow-y: auto; 
+        }
+
+        .inbox-container::-webkit-scrollbar {
+            width: 10px; 
+        }
+
+        .inbox-container::-webkit-scrollbar-thumb {
+            background-color: #888; 
+            border-radius: 10px; 
+        }
+
+        .inbox-container::-webkit-scrollbar-thumb:hover {
+            background-color: #666; 
+        }
+
+        .inbox-container::-webkit-scrollbar-track {
+            background-color: transparent; 
+        }
+
+        .inbox-container h2,
+        .compose-container h2 {
+            color: #fff;
+            text-align: center;
+            margin-top: 0;
+            margin-bottom: 20px;
+            border-bottom: 1px solid #555;
+            padding-bottom: 10px;
+        }
+
+        .compose-container {
+            flex: 1;
+            border-radius: 10px;
+            background-color: #444;
+            padding: 20px;
+            margin-left: 20px; 
+        }
+
+        input[type="email"],
+        input[type="text"],
+        input[type="password"],
+        textarea {
+            width: calc(100% - 20px);
+            padding: 10px;
+            margin-bottom: 10px;
+            margin-top: 10px;
+            border: 1px solid #777;
+            border-radius: 5px;
+            box-sizing: border-box;
+            background-color: #555;
+            color: #fff;
+        }
+
+        button {
+            background-color: #4CAF50;
+            color: #fff;
+            padding: 14px 20px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            width: calc(100% - 20px);
+            font-size: 16px;
+            transition: background-color 0.3s;
+            margin-bottom: 10px;
+            margin-top: 10px;
+        }
+
+        button:hover {
+            background-color: #45a049;
+        }
+
+        button:active {
+            background-color: #3e8e41;
+        }
+
+        button:focus {
+            outline: none;
+        }
+
+        #message {
+            height: 190px;
+        }
+
+        li {
+            background-color: #d4edda;
+            color: #155724;
+            padding: 5px;
+            margin: 5px;
+            margin-bottom: 35px;
+            border-radius: 8px;
+        }
+
+        /* Hide input fields when disabled */
+        .hidden-input {
+            display: none;
+        }
+    </style>
+</head>
+<body>
+    <div id="body">
+        <!-- Inbox Container -->
+        <div class="inbox-container">
+            <h2 class="inbox-heading">Inbox</h2>
+            <ol id="messages"></ol>
+        </div>
+
+        <!-- Compose Container -->
+        <div class="compose-container">
+            <h2>Compose</h2>
+            <!-- Input fields for username and password -->
+            <input type="email" id="username" placeholder="Enter your Email ID" required>
+            <input type="password" id="password" placeholder="Enter your Password" required>
+            <button onclick="login()">Login</button>
+            <!-- Additional input fields for composing email -->
+            <br>
+            <input type="email" id="toUser" placeholder="Send to" class="hidden-input">
+            <br>
+            <input type="text" id="subject" placeholder="Subject" class="hidden-input">
+            <br>
+            <textarea id="message" placeholder="Message" class="hidden-input"></textarea>
+            <br>
+            <button onclick="sendMessage()" id="sendbtn" class="hidden-input">Send</button>
+        </div>
+    </div>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.4.1/socket.io.js"></script>
+    <script>
+        const socket = io();
+        let usernameSet = false;
+
+        function sendMessage() {
+            if (!usernameSet) {
+                alert("Please set a username first");
+                return;
+            }
+
+            const to = document.getElementById('toUser').value.trim();
+            const subject = document.getElementById('subject').value.trim(); 
+            const message = document.getElementById('message').value.trim();
+
+            if (!isValidEmail(to)) {
+                alert("Invalid email address format");
+                return;
+            } 
+            else {
+                socket.emit('sendMessage', { to, subject, message }); 
+                // No "Email Sent" alert here
+            }
+        }
+
+        function isValidEmail(email) {
+            const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+            return emailRegex.test(email);
+        }
+
+        socket.on('receiveMessage', ({ from, subject, message }) => {
+            const messages = document.getElementById('messages');
+            const li = document.createElement('li');
+            message = message.replace(/\n/g, "<br>");
+            li.innerHTML = `<strong>From: ${from} <br> Subject: ${subject}</strong> <br>${message}<br>`; 
+            messages.appendChild(li);
+        });
+
+        socket.on('errorMessage', (error) => {
+            alert(error);
+        });
+
+        socket.on('success' , (successmsg) => {
+            alert(successmsg);
+        });
+
+        function login() {
+            const username = document.getElementById('username').value.trim();
+            const password = document.getElementById('password').value.trim();
+            socket.emit('login', { username, password });
+        }
+
+        socket.on('loginSuccess', (username) => {
+            // Alert for successful login
+            alert(`Login successful. Welcome, ${username}!`);
+            usernameSet = true;
+
+            // Enable compose elements
+            document.getElementById('toUser').classList.remove('hidden-input');
+            document.getElementById('subject').classList.remove('hidden-input');
+            document.getElementById('message').classList.remove('hidden-input');
+            document.getElementById('sendbtn').classList.remove('hidden-input');
+        });
+
+        socket.on('loginFailure', (errorMessage) => {
+            // Alert for unsuccessful login
+            alert(`Login failed: ${errorMessage}`);
+        });
+    </script>
+</body>
+</html>
