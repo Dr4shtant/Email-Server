@@ -1,4 +1,4 @@
-Email Client server using Javascript and socket programming with additional implementation of SSL.
+Email Client server using HTML, Javascript and socket programming with additional implementation of SSL.
 
 
 How to run:
